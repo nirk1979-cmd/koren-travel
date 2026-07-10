@@ -1,0 +1,15 @@
+{
+  "name": "KOREN AI – AI Trip Builder",
+  "short_name": "KOREN AI",
+  "description": "סוכן הנסיעות האישי שלך — תוכניות טיול חכמות ב-AI",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07263F",
+  "theme_color": "#07263F",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
