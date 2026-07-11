@@ -406,11 +406,11 @@ export default function KorenTravelApp() {
   function startPlan() {
     runRef.current += 1;
     setPlan({ logi: null, hotels: null, attractions: null, days: [],
-      loading: { logi: false, hotels: false, itin: false },
-      errs: { logi: false, hotels: false, itin: false }, nextDay: 1 });
+      loading: { logi: false, hotels: false, attr: false, itin: false },
+      errs: { logi: false, hotels: false, attr: false, itin: false }, nextDay: 1 });
     setScreen("plan"); setTab("flights");
     const brief = tripBrief(form);
-    loadLogi(brief); loadHotels(brief); loadDays(1, brief);
+    loadLogi(brief); loadHotels(brief); loadAttractions(brief); loadDays(1, brief);
   }
 
   async function loadLogi(brief) {
@@ -433,13 +433,28 @@ export default function KorenTravelApp() {
     patchPlan(run, p => ({ loading: { ...p.loading, hotels: true }, errs: { ...p.errs, hotels: false } }));
     try {
       const t = await askClaude([{ role: "user", content:
-        `${brief}\nהחזר JSON: {"area":"האזור המומלץ ביותר ללינה ולמה, משפט אחד","hotels":[{"name":"שם אמיתי","area":"אזור","rating":4.5,"price":"$$","pros":["יתרון","יתרון"],"cons":["חיסרון"],"fit":"למי מתאים, קצר"}] בדיוק 3 מלונות,"attractions":[{"name":"שם","desc":"משפט אחד","cat":"קטגוריה","must":true/false}] בדיוק 6 אטרקציות מותאמות לפרופיל. תמציתי מאוד}`
-      }], JSON_SYS, 1000, FAST);
+        `${brief}\nהחזר JSON תמציתי: {"area":"האזור המומלץ ללינה ולמה, משפט אחד","hotels":[{"name":"שם אמיתי","area":"אזור","rating":4.5,"price":"$$","pros":["יתרון","יתרון"],"cons":["חיסרון"],"fit":"למי מתאים, 3-4 מילים"}]} בדיוק 3 מלונות, טקסטים קצרים`
+      }], JSON_SYS, 700, FAST);
       const j = parseJSON(t);
-      if (!Array.isArray(j.hotels) || !Array.isArray(j.attractions)) throw new Error("shape");
-      patchPlan(run, p => ({ hotels: j, attractions: j.attractions, loading: { ...p.loading, hotels: false } }));
+      if (!Array.isArray(j.hotels)) throw new Error("shape");
+      patchPlan(run, p => ({ hotels: j, loading: { ...p.loading, hotels: false } }));
     } catch {
       patchPlan(run, p => ({ loading: { ...p.loading, hotels: false }, errs: { ...p.errs, hotels: true } }));
+    }
+  }
+
+  async function loadAttractions(brief) {
+    const run = runRef.current;
+    patchPlan(run, p => ({ loading: { ...p.loading, attr: true }, errs: { ...p.errs, attr: false } }));
+    try {
+      const t = await askClaude([{ role: "user", content:
+        `${brief}\nהחזר JSON תמציתי: {"attractions":[{"name":"שם","desc":"משפט אחד קצר","cat":"קטגוריה","must":true/false}]} בדיוק 6 אטרקציות מותאמות לפרופיל`
+      }], JSON_SYS, 600, FAST);
+      const j = parseJSON(t);
+      if (!Array.isArray(j.attractions)) throw new Error("shape");
+      patchPlan(run, p => ({ attractions: j.attractions, loading: { ...p.loading, attr: false } }));
+    } catch {
+      patchPlan(run, p => ({ loading: { ...p.loading, attr: false }, errs: { ...p.errs, attr: true } }));
     }
   }
 
@@ -736,8 +751,8 @@ export default function KorenTravelApp() {
 
             {/* — אטרקציות — */}
             {tab === "attr" && <>
-              {plan.errs.hotels && <Retry msg="לא הצלחנו לטעון את האטרקציות." onRetry={() => loadHotels(tripBrief(form))} />}
-              {plan.loading.hotels && <div className="shimmer" style={{ height: 200 }} />}
+              {plan.errs.attr && <Retry msg="לא הצלחנו לטעון את האטרקציות." onRetry={() => loadAttractions(tripBrief(form))} />}
+              {plan.loading.attr && <div className="shimmer" style={{ height: 200 }} />}
               {(plan.attractions || []).map((a, i) => (
                 <div className="card riseS" style={D(i)} key={a.name}>
                   <h3>{a.name} {a.must && <span className="tag warn">חובה!</span>}</h3>
