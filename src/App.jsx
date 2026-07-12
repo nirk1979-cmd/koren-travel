@@ -312,6 +312,9 @@ html,body{width:100%;overflow-x:hidden;background:#F2F7F9}
 .wz{display:inline-flex;gap:5px;align-items:center;margin-top:9px;font-size:11.5px;font-weight:700;color:#1D8FCB;
   text-decoration:none;background:#EAF6FD;border:1px solid #CFE9F8;padding:5px 11px;border-radius:999px}
 
+.pin-input{letter-spacing:.45em;text-align:center;font-weight:800;font-size:21px;font-family:'Heebo',sans-serif}
+.pin-err{color:var(--warn);font-size:12.5px;font-weight:600;margin-top:7px}
+
 .err{background:#FCEAE2;border:1px solid #F2CDBB;color:var(--warn);border-radius:14px;padding:13px 15px;font-size:13px;margin-bottom:14px;font-weight:500}
 .foot{text-align:center;font-size:11px;color:var(--faint);padding:22px 16px 30px;letter-spacing:.06em}
 .foot b{color:var(--ocean);font-weight:700}
@@ -360,6 +363,7 @@ const GROUPS = ["זוג","משפחה","חברים","נסיעת עבודה","סו
 const BUDGETS= ["חסכוני","בינוני","מפנק"];
 const EXP_CATS=["לינה","אוכל","תחבורה","אטרקציות","קניות","אחר"];
 const CAT_IC = { "לינה":"bed","אוכל":"food","תחבורה":"car","אטרקציות":"ticket","קניות":"bag","אחר":"wallet" };
+const ACCESS_CODE = "130809"; // קוד גישה ליצירת תוכנית — לשינוי: החליפו כאן
 const CHUNK = 2; // ימים לכל קריאה — קצר כדי לעמוד במגבלת 10 שניות של Netlify
 const FAST = "claude-haiku-4-5"; // מודל מהיר ליצירת התוכנית (הצ'אט נשאר על Sonnet)
 
@@ -404,8 +408,11 @@ function bookingLinks(f) {
       return `https://www.skyscanner.co.il/transport/flights/tlv/${iata.toLowerCase()}/${d(f.depart)}/${d(f.ret)}/?adults=${f.adults}`;
     },
     booking: `https://www.booking.com/searchresults.he.html?ss=${c}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
+    bookingHotel: (name) => `https://www.booking.com/searchresults.he.html?ss=${encodeURIComponent(name + " " + f.city)}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
     expedia: `https://www.expedia.com/Hotel-Search?destination=${c}&startDate=${f.depart}&endDate=${f.ret}`,
+    expediaHotel: (name) => `https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(name + " " + f.city)}&startDate=${f.depart}&endDate=${f.ret}`,
     hotels: `https://www.hotels.com/search.do?q-destination=${c}`,
+    hotelsHotel: (name) => `https://www.hotels.com/search.do?q-destination=${encodeURIComponent(name + " " + f.city)}`,
     rentalcars: `https://www.rentalcars.com/search-results?location=${c}`,
     discovercars: `https://www.discovercars.com/search?location=${c}`,
     gyg: q => `https://www.getyourguide.com/s/?q=${encodeURIComponent((q || "") + " " + f.city)}`,
@@ -422,6 +429,8 @@ export default function KorenTravelApp() {
   const [screen, setScreen] = useState("home");
   const [splash, setSplash] = useState(true);
   const [videoOpen, setVideoOpen] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinErr, setPinErr] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     country: "", city: "", multi: 1, firstTime: true,
@@ -669,7 +678,13 @@ export default function KorenTravelApp() {
                 <textarea rows={3} value={form.notes} onChange={e => set("notes", e.target.value)}
                   placeholder="למשל: חוגגים יום נשואין, מעדיפים יציאה מאוחרת בבוקר, אחד המטיילים צמחוני…" />
                 <div className="hint">ה-AI יתחשב בזה בבניית התוכנית וההמלצות.</div></div>
-              <div className="summary-glass riseS" style={D(3)}><Ic n="spark" s={17} /> הכל מוכן — ה-AI יבנה עכשיו תוכנית מלאה ל{form.city || "יעד"}</div>
+              <div className="fld riseS" style={D(3)}><label><Ic n="shield" s={14} /> קוד גישה</label>
+                <input className="pin-input" type="password" inputMode="numeric" maxLength={6} dir="ltr"
+                  value={pin} placeholder="● ● ● ● ● ●"
+                  onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setPinErr(false); }} />
+                {pinErr && <div className="pin-err">קוד שגוי — נסו שוב, או פנו למנהל האפליקציה לקבלת קוד.</div>}
+                <div className="hint">יצירת תוכנית פתוחה למחזיקי קוד בלבד.</div></div>
+              <div className="summary-glass riseS" style={D(4)}><Ic n="spark" s={17} /> הכל מוכן — ה-AI יבנה עכשיו תוכנית מלאה ל{form.city || "יעד"}</div>
             </>}
           </div>
 
@@ -677,7 +692,7 @@ export default function KorenTravelApp() {
             <button className="btn-ic back" onClick={() => step === 0 ? setScreen("home") : setStep(step - 1)} aria-label="חזרה"><Ic n="next" s={18} /></button>
             {step < 5
               ? <button className="cta navy" disabled={!canNext} onClick={() => setStep(step + 1)}>המשך <Ic n="back" s={16} /></button>
-              : <button className="cta" onClick={startPlan}><Ic n="spark" s={18} /> בנו לי תוכנית טיול</button>}
+              : <button className="cta" onClick={() => { if (pin === ACCESS_CODE) { setPinErr(false); startPlan(); } else { setPinErr(true); } }}><Ic n="spark" s={18} /> בנו לי תוכנית טיול</button>}
           </div>
         </>
       )}
@@ -789,6 +804,9 @@ export default function KorenTravelApp() {
                   <div className="chd"><div className="cic" style={{ background: "linear-gradient(135deg,#0B4E6E,#07263F)" }}><Ic n="map" s={17} /></div>
                     <div><h3>איפה כדאי לישון?</h3></div></div>
                   <p className="body-txt">{plan.hotels.area}</p>
+                  <div className="links">
+                    <a className="lnk g" href={L.booking} target="_blank" rel="noreferrer">כל המלונות באזור — Booking</a>
+                  </div>
                 </div>
                 {(plan.hotels.hotels || []).map((h, i) => (
                   <div className="card riseS" style={D(i + 1)} key={h.name}>
@@ -800,9 +818,9 @@ export default function KorenTravelApp() {
                     </div>
                     <div className="tagrow"><span className="tag">{h.fit}</span></div>
                     <div className="links">
-                      <a className="lnk g" href={L.booking} target="_blank" rel="noreferrer">Booking</a>
-                      <a className="lnk" href={L.expedia} target="_blank" rel="noreferrer">Expedia</a>
-                      <a className="lnk" href={L.hotels} target="_blank" rel="noreferrer">Hotels.com</a>
+                      <a className="lnk g" href={L.bookingHotel(h.name)} target="_blank" rel="noreferrer">Booking — למלון הזה</a>
+                      <a className="lnk" href={L.expediaHotel(h.name)} target="_blank" rel="noreferrer">Expedia</a>
+                      <a className="lnk" href={L.hotelsHotel(h.name)} target="_blank" rel="noreferrer">Hotels.com</a>
                     </div>
                   </div>
                 ))}
