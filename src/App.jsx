@@ -408,11 +408,11 @@ function bookingLinks(f) {
       return `https://www.skyscanner.co.il/transport/flights/tlv/${iata.toLowerCase()}/${d(f.depart)}/${d(f.ret)}/?adults=${f.adults}`;
     },
     booking: `https://www.booking.com/searchresults.he.html?ss=${c}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
-    bookingHotel: (name) => `https://www.booking.com/searchresults.he.html?ss=${encodeURIComponent(name + " " + f.city)}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
+    bookingHotel: (q) => `https://www.booking.com/searchresults.he.html?ss=${encodeURIComponent(q)}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
     expedia: `https://www.expedia.com/Hotel-Search?destination=${c}&startDate=${f.depart}&endDate=${f.ret}`,
-    expediaHotel: (name) => `https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(name + " " + f.city)}&startDate=${f.depart}&endDate=${f.ret}`,
+    expediaHotel: (q) => `https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(q)}&startDate=${f.depart}&endDate=${f.ret}`,
     hotels: `https://www.hotels.com/search.do?q-destination=${c}`,
-    hotelsHotel: (name) => `https://www.hotels.com/search.do?q-destination=${encodeURIComponent(name + " " + f.city)}`,
+    hotelsHotel: (q) => `https://www.hotels.com/search.do?q-destination=${encodeURIComponent(q)}`,
     rentalcars: `https://www.rentalcars.com/search-results?location=${c}`,
     discovercars: `https://www.discovercars.com/search?location=${c}`,
     gyg: q => `https://www.getyourguide.com/s/?q=${encodeURIComponent((q || "") + " " + f.city)}`,
@@ -482,7 +482,7 @@ export default function KorenTravelApp() {
     patchPlan(run, p => ({ loading: { ...p.loading, hotels: true }, errs: { ...p.errs, hotels: false } }));
     try {
       const t = await askClaude([{ role: "user", content:
-        `${brief}\nהחזר JSON תמציתי: {"area":"האזור המומלץ ללינה ולמה, משפט אחד","hotels":[{"name":"שם אמיתי","area":"אזור","rating":4.5,"price":"$$","pros":["יתרון","יתרון"],"cons":["חיסרון"],"fit":"למי מתאים, 3-4 מילים"}]} בדיוק 3 מלונות, טקסטים קצרים`
+        `${brief}\nהחזר JSON תמציתי: {"area":"האזור המומלץ ללינה ולמה, משפט אחד","hotels":[{"name":"שם אמיתי","area":"אזור","rating":4.5,"price":"$$","pros":["יתרון","יתרון"],"cons":["חיסרון"],"fit":"למי מתאים, 3-4 מילים","bq":"שם החיפוש המדויק באנגלית: שם המלון המלא + העיר + המדינה, למשל Hotel Sacher Salzburg Austria"}]} בדיוק 3 מלונות, טקסטים קצרים`
       }], JSON_SYS, 700, FAST);
       const j = parseJSON(t);
       if (!Array.isArray(j.hotels)) throw new Error("shape");
@@ -818,9 +818,9 @@ export default function KorenTravelApp() {
                     </div>
                     <div className="tagrow"><span className="tag">{h.fit}</span></div>
                     <div className="links">
-                      <a className="lnk g" href={L.bookingHotel(h.name)} target="_blank" rel="noreferrer">Booking — למלון הזה</a>
-                      <a className="lnk" href={L.expediaHotel(h.name)} target="_blank" rel="noreferrer">Expedia</a>
-                      <a className="lnk" href={L.hotelsHotel(h.name)} target="_blank" rel="noreferrer">Hotels.com</a>
+                      <a className="lnk g" href={L.bookingHotel(h.bq || `${h.name} ${form.city} ${form.country}`)} target="_blank" rel="noreferrer">Booking — למלון הזה</a>
+                      <a className="lnk" href={L.expediaHotel(h.bq || `${h.name} ${form.city} ${form.country}`)} target="_blank" rel="noreferrer">Expedia</a>
+                      <a className="lnk" href={L.hotelsHotel(h.bq || `${h.name} ${form.city} ${form.country}`)} target="_blank" rel="noreferrer">Hotels.com</a>
                     </div>
                   </div>
                 ))}
