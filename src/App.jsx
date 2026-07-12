@@ -399,6 +399,10 @@ function bookingLinks(f) {
   return {
     gflights: `https://www.google.com/travel/flights?q=${encodeURIComponent(`טיסות מתל אביב ל${f.city} ${f.depart}`)}`,
     skyscanner: `https://www.skyscanner.co.il/transport/flights/tlv/${c}/`,
+    skyDated: (iata) => {
+      const d = s => s.replaceAll("-", "").slice(2); // YYYY-MM-DD -> YYMMDD
+      return `https://www.skyscanner.co.il/transport/flights/tlv/${iata.toLowerCase()}/${d(f.depart)}/${d(f.ret)}/?adults=${f.adults}`;
+    },
     booking: `https://www.booking.com/searchresults.he.html?ss=${c}&checkin=${f.depart}&checkout=${f.ret}&group_adults=${f.adults}`,
     expedia: `https://www.expedia.com/Hotel-Search?destination=${c}&startDate=${f.depart}&endDate=${f.ret}`,
     hotels: `https://www.hotels.com/search.do?q-destination=${c}`,
@@ -454,7 +458,7 @@ export default function KorenTravelApp() {
     patchPlan(run, p => ({ loading: { ...p.loading, logi: true }, errs: { ...p.errs, logi: false } }));
     try {
       const t = await askClaude([{ role: "user", content:
-        `${brief}\nהחזר JSON: {"flights":{"advice":"המלצה קצרה על טיסות מישראל","airlines":["חברה1","חברה2","חברה3"],"times":"שעות טיסה מומלצות","price":"טווח מחיר משוער לאדם בדולרים"},"car":{"needed":true/false,"reason":"נימוק קצר","type":"סוג רכב מומלץ או null","pickup":"היכן לאסוף ולהחזיר או null"}}`
+        `${brief}\nהחזר JSON: {"flights":{"advice":"המלצה קצרה על טיסות מישראל","airlines":["חברה1","חברה2","חברה3"],"times":"שעות טיסה מומלצות","price":"טווח מחיר משוער לאדם בדולרים","iata":"קוד IATA של שדה התעופה הראשי ביעד, 3 אותיות, למשל ATH"},"car":{"needed":true/false,"reason":"נימוק קצר","type":"סוג רכב מומלץ או null","pickup":"היכן לאסוף ולהחזיר או null"}}`
       }], JSON_SYS, 800, FAST);
       const j = parseJSON(t);
       if (!j.flights || !j.car) throw new Error("shape");
@@ -738,7 +742,7 @@ export default function KorenTravelApp() {
                   </div>
                   <div className="links">
                     <a className="lnk g" href={L.gflights} target="_blank" rel="noreferrer">Google Flights</a>
-                    <a className="lnk" href={L.skyscanner} target="_blank" rel="noreferrer">Skyscanner</a>
+                    <a className="lnk" href={/^[A-Za-z]{3}$/.test(plan.logi.flights.iata || "") ? L.skyDated(plan.logi.flights.iata) : L.skyscanner} target="_blank" rel="noreferrer">Skyscanner</a>
                   </div>
                 </div>
                 <div className="card riseS" style={D(1)}>
